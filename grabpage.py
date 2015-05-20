@@ -34,7 +34,36 @@ def insertBandName(bandname):
     cur.execute("SELECT bandid FROM dicband WHERE bandname = '%s'" % (bandname,))
     bandid = cur.fetchall()
     return bandid[0][0]
+#--------------------------------------------------------------------18 May-------
+def buildBandUrl(bandname):
+    return ("http://www.last.fm/music/%s" % (bandname))
 
+def grabBandPage(url, bandid):
+  f = urllib.request.urlopen(url)
+  page = f.read().decode('utf-8')
+  line = re.findall('googletag.pubads().setTargeting("tag", "([^"]+)");', page) #find all tag-words
+  tags = line[0][1].split(',')  #я не зрозуміла. перепояснити!!!
+  for item in tags:
+      genreid = insertGenreName(item)
+      insertGenreBandMx(bandid, genreid)
+
+def insertGenreName(genrename):
+     try:
+        cur.execute("INSERT INTO dicgenre(genrename) VALUES ('%s')" % (genrename,))
+        conn.commit()
+    except:
+        conn.rollback()
+        cur.execute("SELECT genreid FROM dicgenre WHERE genrename = '%s'" % (genrename,))
+    genreid = cur.fetchall()
+    return genreid[0][0]
+
+def insertGenreBandMx(bandid, genreid):
+    try:
+        cur.execute("INSERT INTO bandgenremx(bandid, genreid) VALUES ('%s', '%s')" % (bandid, genreid, ))
+        conn.commit()
+    except:
+        conn.rollback()
+  #------------------------------------------------------------
 def grabPage(url):
   f = urllib.request.urlopen(url)
   page = f.read().decode('utf-8')
@@ -51,18 +80,18 @@ def grabPage(url):
   line = re.findall('<a href="/music/([^/]+)/_/([^/]+)"\s+class="recent-tracks-image media-pull-left media-link-hook">.*? datetime="([\d\-:TZ]+)"', page, re.S)
   Debug(line)
   for item in line:
-      dictionary['song']= item[0]
-      dictionary['author'] = item[1]
-      dictionary['time'] = item[2]
       bandid = insertBandName(item[1])        #insert in db-dict
-      insertSongName(item[0], bandid)        #insert in db-dict
-      massive.append(dictionary)
+      grabBandPage(buildBandUrl(item[1]), bandid)
+      songid = insertSongName(item[0], bandid)        #insert in db-dict
+
   
   return nextpage
 
+def buildHistoryUrl(username, page):
+  return ("http://www.last.fm/user/%s/tracks?page=%s" % (username, page))
+
 def grabUserPages(username):
     print('Grabbing Pages for User %s' % username)
-    #-grab username, insert into db, return userid
     nextpage = 1
     while nextpage != False:
         print('Grabbing Page %s for User' % nextpage)
@@ -72,10 +101,9 @@ def grabUserPages(username):
   
 #<a href="/music/Downlink/_/Triphekta"     class="recent-tracks-image media-pull-left media-link-hook"> 
 
-def buildHistoryUrl(username, page):
-  return ("http://www.last.fm/user/%s/tracks?page=%s" % (username, page))
 
-grabUserPages('kakabomba')
+
+grabUserPages('kakabomba')  #THE FIRST STEP
 
 conn.commit() #end db-connection  
 
