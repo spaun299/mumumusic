@@ -1,16 +1,27 @@
 import urllib.request
 import re
 import pprint
-import psycopg2
 import datetime
-
+from sqlalchemy import MetaData,create_engine,insert
+from sqlalchemy.ext.automap import automap_base
+from sqlalchemy.orm import Session
 pp = pprint.PrettyPrinter(indent=4)
-DEBUG = False
-
-conn = psycopg2.connect(
-    "dbname='MusicGenreMigration' user='postgres' host='postgres.d' password='minkovski'")  # connection to db
-cur = conn.cursor()
-
+DEBUG = True
+metadata=MetaData()
+engine = create_engine('postgresql://postgres:minkovski@postgres.d/MusicGenreMigration')     # connection to SQLALCHEMY db
+metadata.reflect(engine, only=['dicband','dicsong','userlist','listening','dicgenre','bandgenremx']) #connect to tables
+Base = automap_base(metadata=metadata) # make auto-generation existing tables and classes
+Base.prepare()
+connection=engine.connect()
+# Connect classes to tables
+Band=Base.classes.dicband
+Song=Base.classes.dicsong
+User=Base.classes.userlist
+Listening=Base.classes.listening
+Genre=Base.classes.dicgenre
+BandAndGen=Base.classes.bandgenremx
+#create session handler
+sql_session = Session(engine)
 
 def Debug(s):
     # pp.pprint(s)
@@ -26,27 +37,31 @@ def Info(s):
 
 
 def insertSongName(songname, bandid):
+    # Add Song into dicsong table and than Select id
     try:
-        cur.execute("INSERT INTO dicsong(songname, bandid) VALUES ('%s', '%s')" % (songname, bandid, ))
-        conn.commit()
+        sql_session.add(Song(songname=songname,bandid=bandid))
+        sql_session.commit()
     except:
-        conn.rollback()
-    cur.execute("SELECT songid FROM dicsong WHERE songname = '%s' AND bandid = '%s'" % (songname, bandid))
-    songid = cur.fetchall()
-    return songid[0][0]
+        sql_session.rollback()
+    for song in sql_session.query(Song):
+        if songname==song.songname and bandid==song.bandid:
+            Info(song.songname)
+            return song.songid
+
 
 
 def insertBandName(bandname):
+    # Add Band into dicband table and than Select id
     try:
-        cur.execute("INSERT INTO dicband(bandname) VALUES ('%s')" % (bandname,))
-        conn.commit()
+        sql_session.add(Band(bandname=bandname))
+        sql_session.commit()
     except:
-        conn.rollback()
+        sql_session.rollback()
     # print("INSERT INTO dicband(bandname) VALUES ('%s')" % (bandname,))
     #conn.commit()
-    cur.execute("SELECT bandid FROM dicband WHERE bandname = '%s'" % (bandname,))
-    bandid = cur.fetchall()
-    return bandid[0][0]
+    for band in sql_session.query(Band):
+        if bandname==band.bandname:
+            return band.bandid
 
 
 # --------------------------------------------------------------------18th May-------
@@ -72,33 +87,33 @@ def grabBandPage(url, bandid):
 
 
 def insertGenreName(genrename):
+    # Add Genre into dicgenre table and than Select id
     try:
-        cur.execute("INSERT INTO dicgenre(genrename) VALUES ('%s')" % (genrename,))
-        conn.commit()
+        sql_session.add(Genre(genrename=genrename))
+        sql_session.commit()
 
     except:
-        conn.rollback()
-    cur.execute("SELECT genreid FROM dicgenre WHERE genrename = '%s'" % (genrename,))
-    genreid = cur.fetchall()
-    return genreid[0][0]
+        sql_session.rollback()
+    for genre in sql_session.query(Genre):
+        if genrename==genre.genrename:
+            return genre.genreid
 
 
 def insertGenreBandMx(bandid, genreid):
     try:
-        cur.execute("INSERT INTO bandgenremx(bandid, genreid) VALUES ('%s', '%s')" % (bandid, genreid, ))
-        conn.commit()
+        sql_session.add(BandAndGen(bandid=bandid,genreid=genreid))
+        sql_session.commit()
     except:
-        conn.rollback()
+        sql_session.rollback()
         #------------------------------------------------------------20th May
 
 
 def insertListening(userid, songid, listeningdate):
     try:
-        cur.execute("INSERT INTO listening(userid, songid, listeningdate) VALUES ('%s', '%s', '%s')" % (
-        userid, songid, listeningdate,))
-        conn.commit()
+        sql_session.add(Listening(userid=userid,songid=songid,listeningdate=listeningdate))
+        sql_session.commit()
     except:
-        conn.rollback()
+        sql_session.rollback()
 
 
 def insertUser(url, username):
@@ -106,14 +121,16 @@ def insertUser(url, username):
     page = f.read().decode('utf-8')
     searchresult = re.search('<small>since ([\d]{1,2}[\s]+[a-zA-Z]+ [\d]{4,4})</small></span><p class="userActivity">', page)
     regdate = datetime.datetime.strptime(searchresult.group(1), "%d %b %Y")
+    # Add User into userlist table and than Select id
     try:
-        cur.execute("INSERT INTO userlist(username, regdate) VALUES ('%s', '%s')" % (username, regdate, ))
-        conn.commit()
+        sql_session.add(User(username=username,regdate=regdate))
+        sql_session.commit()
     except:
-        conn.rollback()
-    cur.execute("SELECT userid FROM userlist WHERE username = '%s'" % (username,))
-    userid = cur.fetchall()
-    return userid[0][0]
+        sql_session.rollback()
+
+    for user in sql_session.query(User):
+        if username==user.username:
+            return user.userid
 
     #-------------------------------------------------------21th May
 
@@ -159,7 +176,7 @@ def grabUserPages(username):
 
 
 
-grabUserPages('kakabomba')  #THE FIRST STEP
+grabUserPages('mine')  #THE FIRST STEP
 
 
 
