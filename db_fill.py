@@ -3,7 +3,7 @@ from print_info import *
 import datetime
 import urllib.request
 import re
-def insertUser(url, username):
+def insert_user(url, username):
     f = urllib.request.urlopen(url)
     page = f.read().decode('utf-8')
     searchresult = re.search('<small>since ([\d]{1,2}[\s]+[a-zA-Z]+ [\d]{4,4})</small></span><p class="userActivity">', page)
@@ -19,7 +19,7 @@ def insertUser(url, username):
         if username==user.username:
             return user.userid
 
-def insertSongName(songname, bandid):
+def insert_song_name(songname, bandid):
     # Add Song into dicsong table and than Select id
     try:
         sql_session.add(Song(songname=songname,bandid=bandid))
@@ -28,11 +28,11 @@ def insertSongName(songname, bandid):
         sql_session.rollback()
     for song in sql_session.query(Song):
         if songname==song.songname and bandid==song.bandid:
-            Info(song.songname)
+            info(song.songname)
             return song.songid
 
 
-def insertBandName(bandname):
+def insert_band_name(bandname):
     # Add Band into dicband table and than Select id
     try:
         sql_session.add(Band(bandname=bandname))
@@ -44,7 +44,7 @@ def insertBandName(bandname):
     for band in sql_session.query(Band):
         if bandname==band.bandname:
             return band.bandid
-def insertGenreName(genrename):
+def insert_genre_name(genrename):
     # Add Genre into dicgenre table and than Select id
     try:
         sql_session.add(Genre(genrename=genrename))
@@ -57,7 +57,7 @@ def insertGenreName(genrename):
             return genre.genreid
 
 
-def insertGenreBandMx(bandid, genreid):
+def insert_genre_band_mx(bandid, genreid):
     try:
         sql_session.add(BandAndGen(bandid=bandid,genreid=genreid))
         sql_session.commit()
@@ -66,7 +66,7 @@ def insertGenreBandMx(bandid, genreid):
         #------------------------------------------------------------20th May
 
 
-def insertListening(userid, songid, listeningdate):
+def insert_listening(userid, songid, listeningdate):
     try:
         sql_session.add(Listening(userid=userid,songid=songid,listeningdate=listeningdate))
         sql_session.commit()

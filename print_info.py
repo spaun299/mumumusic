@@ -1,13 +1,13 @@
 import pprint
 pp = pprint.PrettyPrinter(indent=4)
-def Debug(s):
+def debug(s):
     # pp.pprint(s)
     pass
 
-def Error(s):
+def error(s):
     pp.pprint(s)
     pass
 
-def Info(s):
+def info(s):
     pp.pprint(s)
     pass
